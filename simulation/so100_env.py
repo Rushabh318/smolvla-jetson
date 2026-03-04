@@ -13,10 +13,11 @@ JOINT_LIMITS = np.array([
 
 HOME_QPOS = np.array([0.0, -1.57, 1.57, 1.57, -1.57, 0.0])
 
-# Cube spawn range on the table surface (x, y in world frame)
-CUBE_X_RANGE = (-0.08, 0.08)
-CUBE_Y_RANGE = (0.13, 0.28)
-CUBE_Z = 0.325  # table surface + half cube height
+# Cube spawn range on table surface (x, y in world frame).
+# Table surface at z=0; cube half-height=0.015
+CUBE_X_RANGE = (-0.12, 0.12)
+CUBE_Y_RANGE = (-0.28, -0.10)
+CUBE_Z = 0.015
 
 
 class SO100Env:
@@ -45,7 +46,7 @@ class SO100Env:
         # Place cube on table
         adr = self._cube_jnt_adr
         x = np.random.uniform(*CUBE_X_RANGE) if randomize_cube else 0.0
-        y = np.random.uniform(*CUBE_Y_RANGE) if randomize_cube else 0.2
+        y = np.random.uniform(*CUBE_Y_RANGE) if randomize_cube else -0.18
         self.data.qpos[adr:adr+3] = [x, y, CUBE_Z]
         self.data.qpos[adr+3:adr+7] = [1.0, 0.0, 0.0, 0.0]  # unit quaternion
 
@@ -71,8 +72,8 @@ class SO100Env:
 
     def _get_obs(self) -> dict:
         return {
-            "top_cam": self.render_rgb("top_cam"),
-            "wrist_cam": self.render_rgb("wrist_cam"),
+            "top": self.render_rgb("top"),
+            "wrist": self.render_rgb("wrist"),
             "joint_positions": self.get_joint_positions(),
         }
 
