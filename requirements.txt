@@ -1,0 +1,77 @@
+# Edge SmolVLA Inference - Requirements
+# Tested on: Jetson Orin Nano (JetPack 6.x), Ubuntu 22.04
+# PyTorch is pre-installed on Jetson via nvidia-l4t-pytorch
+
+# ============================================
+# Core Dependencies
+# ============================================
+
+# MuJoCo simulation
+mujoco>=3.1.6
+
+# HuggingFace ecosystem for SmolVLA
+transformers>=4.40.0
+accelerate>=0.28.0
+safetensors>=0.4.0
+
+# LeRobot (contains SmolVLA implementation)
+lerobot>=0.1.0
+
+# ============================================
+# Image Processing
+# ============================================
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+
+# ============================================
+# Configuration & Utilities
+# ============================================
+PyYAML>=6.0
+omegaconf>=2.3.0
+tqdm>=4.65.0
+
+# ============================================
+# Benchmarking & Logging
+# ============================================
+pandas>=2.0.0
+psutil>=5.9.0
+
+# ============================================
+# Visualization (optional)
+# ============================================
+# glfw>=2.6.0  # Uncomment for GLFW visualization
+# imageio>=2.31.0  # For video recording
+# imageio-ffmpeg>=0.4.8
+
+# ============================================
+# Testing
+# ============================================
+pytest>=7.4.0
+pytest-timeout>=2.2.0
+
+# ============================================
+# TensorRT (optional - stretch goal)
+# ============================================
+# tensorrt  # Install via: pip install tensorrt --extra-index-url https://pypi.nvidia.com
+# onnx>=1.14.0
+# onnxruntime-gpu>=1.16.0
+
+# ============================================
+# Notes for Jetson Installation
+# ============================================
+#
+# 1. PyTorch is pre-installed on Jetson. Do NOT install via pip.
+#    If needed, install from: https://forums.developer.nvidia.com/t/pytorch-for-jetson/72048
+#
+# 2. Install this file with:
+#    pip install -r requirements.txt
+#
+# 3. For MuJoCo rendering, you may need:
+#    sudo apt-get install libosmesa6-dev libgl1-mesa-glx libglfw3
+#
+# 4. Set environment for headless rendering:
+#    export MUJOCO_GL=egl  # or osmesa
+#
+# 5. For GLFW visualization:
+#    export MUJOCO_GL=glfw
+#    sudo apt-get install libglfw3 libglfw3-dev

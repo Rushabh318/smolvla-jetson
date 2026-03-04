@@ -1,0 +1,206 @@
+# Edge SmolVLA Inference Configuration
+# Default configuration for Jetson Orin Nano
+
+# ============================================
+# Model Configuration
+# ============================================
+model:
+  # HuggingFace model identifier
+  name: "lerobot/smolvla_base"
+
+  # Device for inference: "cuda" or "cpu"
+  device: "cuda"
+
+  # Enable FP16 (half precision) for faster inference and lower memory
+  # Recommended for Jetson to stay within memory limits
+  use_fp16: false
+
+  # Cache directory for downloaded models
+  # Set to fast storage (NVMe) if available
+  cache_dir: null  # Uses HF_HOME or ~/.cache/huggingface
+
+# ============================================
+# Simulation Configuration
+# ============================================
+simulation:
+  # Path to MuJoCo scene XML
+  scene_path: "simulation/scene.xml"
+
+  # Path to MuJoCo Menagerie (for SO-ARM100)
+  menagerie_path: "third_party/mujoco_menagerie"
+
+  # Image resolution for camera rendering
+  # SmolVLA native: 512x512
+  image_resolution: 512
+
+  # Camera names defined in scene.xml
+  cameras:
+    - "top_cam"
+    - "wrist_cam"
+
+  # Physics simulation timestep (seconds)
+  physics_timestep: 0.002
+
+  # Control frequency in Hz
+  # Higher = smoother motion, but more compute
+  control_frequency: 50
+
+  # Number of physics steps per control step
+  # physics_steps = 1 / (physics_timestep * control_frequency)
+  # With 0.002 timestep and 50Hz control: 10 physics steps per control
+
+  # Cube spawn configuration
+  cube:
+    size: [0.03, 0.03, 0.03]  # 3cm cube
+    spawn_area:
+      x: [-0.1, 0.1]
+      y: [0.1, 0.25]
+      z: 0.015  # Half cube height above table
+
+# ============================================
+# Robot Configuration
+# ============================================
+robot:
+  # SO-ARM100 joint names (in order)
+  joint_names:
+    - "Rotation"
+    - "Pitch"
+    - "Elbow"
+    - "Wrist_Pitch"
+    - "Wrist_Roll"
+    - "Jaw"
+
+  # Joint limits in radians [min, max]
+  joint_limits:
+    Rotation: [-1.92, 1.92]
+    Pitch: [-3.32, 0.174]
+    Elbow: [-0.174, 3.14]
+    Wrist_Pitch: [-1.66, 1.66]
+    Wrist_Roll: [-2.79, 2.79]
+    Jaw: [-0.174, 1.75]
+
+  # Initial joint positions for reset
+  initial_position: [0.0, -1.57, 1.57, 0.0, 0.0, 0.5]
+
+  # Action scaling mode: "absolute" or "delta"
+  action_mode: "absolute"
+
+# ============================================
+# Inference Configuration
+# ============================================
+inference:
+  # Default instruction (can be overridden via CLI)
+  instruction: "pick up the cube"
+
+  # How to handle 50-action chunks from SmolVLA
+  # Options: "first", "average", "full", "interpolate"
+  # - first: use only first action (simplest)
+  # - average: average all 50 actions
+  # - full: execute all 50 sequentially
+  # - interpolate: interpolate between start and end
+  chunk_strategy: "first"
+
+  # For "full" strategy: delay between chunk actions (seconds)
+  chunk_execution_delay: 0.02
+
+  # Warmup iterations before timing starts
+  warmup_iterations: 5
+
+# ============================================
+# Benchmark Configuration
+# ============================================
+benchmark:
+  # Duration of benchmark run in seconds
+  duration_sec: 30
+
+  # Number of warmup steps (not timed)
+  warmup_steps: 10
+
+  # Output directory for CSV files
+  output_dir: "outputs/"
+
+  # CSV filename pattern (timestamp appended)
+  csv_filename: "benchmark_results"
+
+  # Metrics to collect
+  metrics:
+    - "inference_latency_ms"
+    - "loop_latency_ms"
+    - "fps"
+    - "gpu_memory_mb"
+    - "system_memory_mb"
+
+# ============================================
+# Logging Configuration
+# ============================================
+logging:
+  # Directory for log files
+  log_dir: "logs/"
+
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+
+  # Log to console in addition to file
+  console: true
+
+  # Log filename pattern
+  filename: "smolvla_inference"
+
+  # Max log file size before rotation (MB)
+  max_size_mb: 10
+
+  # Number of backup files to keep
+  backup_count: 5
+
+# ============================================
+# Visualization Configuration
+# ============================================
+visualization:
+  # Enable real-time viewer window
+  enabled: false
+
+  # Window size [width, height]
+  window_size: [640, 480]
+
+  # Target display FPS (independent of control loop)
+  display_fps: 30
+
+  # Show overlay with stats (FPS, latency)
+  show_stats: true
+
+  # Which camera to display (cycles with 'c' key)
+  default_camera: "top_cam"
+
+# ============================================
+# Recording Configuration
+# ============================================
+recording:
+  # Enable video recording
+  enabled: false
+
+  # Output directory for recordings
+  output_dir: "outputs/videos/"
+
+  # Video codec: "mp4v", "avc1", "xvid"
+  codec: "mp4v"
+
+  # Recording FPS
+  fps: 30
+
+  # Save individual frames as images
+  save_frames: false
+
+# ============================================
+# Memory Configuration
+# ============================================
+memory:
+  # Maximum GPU memory to use (MB)
+  # Set to null for no limit
+  # Jetson Orin Nano has ~7.4GB unified memory
+  max_gpu_memory_mb: 6000
+
+  # Enable memory-efficient attention (if supported)
+  efficient_attention: true
+
+  # Clear CUDA cache between episodes
+  clear_cache_on_reset: true
