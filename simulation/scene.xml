@@ -15,8 +15,7 @@
     <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.2 0.2" rgb2="0.15 0.15 0.15"
       markrgb="0.5 0.5 0.5" width="300" height="300"/>
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="6 6" reflectance="0.05"/>
-    <!-- Table surface: light wood colour matching typical SO100 lab setups -->
-    <material name="table" rgba="0.92 0.87 0.75 1"/>
+    <material name="table" rgba="0.22 0.22 0.22 1"/>
     <material name="cube" rgba="1 0.2 0.1 1"/>
   </asset>
 
@@ -42,10 +41,9 @@
             solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001"/>
     </body>
 
-    <!-- Top camera: overhead stand mounted above workspace, looking nearly straight down.
-         Replicates SO100 training data setup (3D-printed stand above workspace).
-         pos=(0, -0.10, 0.55), target=(0, -0.15, 0) → look dir ≈ (0,-0.09,-1.0).
-         Z_cam=(0, 0.09, 0.996), Y_cam=Z×X=(0, 0.996, -0.09) → xyaxes="1 0 0 0 0.996 -0.090" -->
-    <camera name="top" pos="0.0 -0.10 0.55" xyaxes="1 0 0 0 0.996 -0.090"/>
+    <!-- Top camera: raised to z=0.85 for wider bird's-eye view.
+         pos=(0, -0.05, 0.85), target=(0, -0.15, 0) → look dir (0,-0.116,-0.993).
+         Z_cam=(0,0.116,0.993), Y_cam=Z×X=(0,0.993,-0.116) → xyaxes="1 0 0 0 0.993 -0.116" -->
+    <camera name="top" pos="0.0 -0.05 0.85" xyaxes="1 0 0 0 0.993 -0.116"/>
   </worldbody>
 </mujoco>

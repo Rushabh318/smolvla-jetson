@@ -99,11 +99,13 @@
               <geom type="mesh" mesh="Wrist_Pitch_Roll" class="visual"/>
               <geom type="mesh" mesh="Wrist_Pitch_Roll_Motor" class="motor_visual"/>
               <geom type="mesh" mesh="Wrist_Pitch_Roll" class="collision"/>
-              <!-- No camera on Wrist_Pitch_Roll -->
               <body name="Fixed_Jaw" pos="0 -0.0601 0" euler="0 1.57079 0">
                 <inertial pos="0.00552377 -0.0280167 0.000483583" quat="0.41836 0.620891 -0.350644 0.562599"
                   mass="0.0929859" diaginertia="5.03136e-05 4.64098e-05 2.72961e-05"/>
                 <joint name="Wrist_Roll" class="Wrist_Roll"/>
+                <!-- Wrist camera: mounted on Fixed_Jaw body above the hinge, looking down toward
+                     the jaw tips and workspace. Both jaws visible at top of frame, table below. -->
+                <camera name="wrist" pos="0 0.02 0.06" xyaxes="1 0 0 0 0 -1" fovy="100"/>
                 <geom type="mesh" mesh="Fixed_Jaw" class="visual"/>
                 <geom type="mesh" mesh="Fixed_Jaw_Motor" class="motor_visual"/>
                 <geom type="mesh" mesh="Fixed_Jaw_Collision_1" class="collision"/>
@@ -112,11 +114,6 @@
                 <geom class="finger_collision" name="fixed_jaw_pad_2" size="0.001 0.005 0.006" pos="0.0109 -0.0914 0"/>
                 <geom class="finger_collision" name="fixed_jaw_pad_3" size="0.001 0.01 0.007" pos="0.0126 -0.0768 0"/>
                 <geom class="finger_collision" name="fixed_jaw_pad_4" size="0.001 0.01 0.008" pos="0.0143 -0.0572 0"/>
-                <!-- Wrist camera: mounted on Fixed_Jaw body (end-effector), looking toward fingers.
-                     In home pose: Fixed_Jaw local -Y ≈ world -Z (fingers point straight down).
-                     Camera offset +Y (behind fingers) and looks toward -Y (toward fingers/object).
-                     z_cam_local=(0,1,0), Y_cam=z×x=(0,0,-1), xyaxes="1 0 0 0 0 -1" -->
-                <camera name="wrist" pos="0.0 0.08 0.0" xyaxes="1 0 0 0 0 -1"/>
                 <body name="Moving_Jaw" pos="-0.0202 -0.0244 0" quat="1.34924e-11 -3.67321e-06 1 -3.67321e-06">
                   <inertial pos="-0.00161745 -0.0303473 0.000449646" quat="0.696562 0.716737 -0.0239844 -0.0227026"
                     mass="0.0202444" diaginertia="1.11265e-05 8.99651e-06 2.99548e-06"/>
