@@ -12,8 +12,8 @@ model:
   device: "cuda"
 
   # Enable FP16 (half precision) for faster inference and lower memory
-  # Recommended for Jetson to stay within memory limits
-  use_fp16: false
+  # Required on Jetson Orin Nano: fp32 activations OOM during VLM forward pass
+  use_fp16: true
 
   # Cache directory for downloaded models
   # Set to fast storage (NVMe) if available

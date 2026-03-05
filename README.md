@@ -116,14 +116,16 @@ benchmark:
   duration_sec: 30
 ```
 
-## Performance Targets
+## Performance Results
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| FPS | ≥ 5 | TBD |
-| Inference Latency | < 150ms | TBD |
-| GPU Memory | < 6GB | TBD |
-| Episode Duration | ≥ 30s | TBD |
+| FPS | ≥ 5 | **9.63** |
+| Inference Latency | < 150ms | **62ms** |
+| GPU Memory | < 6GB | ~1.1GB model (fp16) |
+| Episode Duration | ≥ 30s | ✓ (289 steps / 30s) |
+
+Measured on Jetson Orin Nano 8GB, fp16, 512×512, `PYTORCH_NO_CUDA_MEMORY_CACHING=1`.
 
 ## Docker Usage
 
@@ -178,7 +180,7 @@ export MUJOCO_GL=glfw    # Windowed (needs display)
 ### GPU Out of Memory
 
 ```bash
-# Enable FP16
+# Enable FP16 (required on Jetson — fp32 activations OOM during VLM forward pass)
 python main.py --fp16
 
 # Or in config:
@@ -191,6 +193,49 @@ python main.py --fp16
 # Set cache to fast storage
 export HF_HOME=/path/to/nvme/.cache/huggingface
 ```
+
+## Jetson-Specific Notes
+
+These issues were encountered and solved during development on Jetson Orin Nano 8GB.
+
+### PyTorch wheel: must use Jetson build, not server-ARM build
+
+Standard `pip install torch` on ARM installs a server-ARM wheel targeting sm_80/sm_90 (A100/H100).
+Jetson Orin GPU is **sm_87** — running CUDA kernels with the wrong wheel gives:
+```
+cudaErrorNoKernelImageForDevice
+```
+Install the Jetson-specific wheel from NVIDIA (e.g. `torch-2.9.1-cp310-cp310-linux_aarch64.whl`).
+Verify: `torch.cuda.get_arch_list()` must contain `sm_87`.
+
+### Unified memory and the CUDA caching allocator
+
+Jetson uses unified memory (CPU and GPU share the same physical RAM).
+PyTorch's `CUDACachingAllocator` calls NVML internally to pre-allocate blocks, which triggers an
+assertion failure on Jetson:
+```
+NVML_SUCCESS == r INTERNAL ASSERT FAILED at CUDACachingAllocator.cpp:1123
+```
+Fix: `export PYTORCH_NO_CUDA_MEMORY_CACHING=1`
+
+Also, `transformers 5.x` calls `caching_allocator_warmup` at import time (same NVML path).
+The loader patches this to a no-op before importing any transformers model.
+
+### `torch.cuda.memory_allocated()` returns 0 on Jetson
+
+NvMap (Jetson's unified memory allocator) bypasses PyTorch's standard CUDA allocator tracking.
+Use `torch.cuda.mem_get_info()` instead — it queries NVML and reports correctly.
+
+### Load model before initializing MuJoCo
+
+MuJoCo EGL context initialization consumes ~0.5GB of unified memory. On a system with ~3GB free,
+this leaves insufficient contiguous unified memory for moving the model to CUDA. Always load the
+model first, then initialize the simulation environment.
+
+### FP16 is required for inference (not just recommended)
+
+fp32 VLM forward pass activations for two 512×512 images exhaust available unified memory
+(~1.6GB free at inference time). fp16 halves activation memory and enables stable 9.6 FPS.
 
 ## License
 

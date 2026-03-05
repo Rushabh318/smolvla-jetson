@@ -18,196 +18,106 @@ import signal
 import sys
 from pathlib import Path
 
-# TODO: Implement these imports as modules are developed
-# from utils.logging import setup_logging, get_logger
-# from utils.config import load_config
-# from simulation.so100_env import SO100PickEnv
-# from models.smolvla_loader import SmolVLAModel
-# from inference.run_closed_loop import run_episode
-# from benchmarking.metrics import MemoryLogger
+# Add lerobot to Python path for editable dev install
+sys.path.insert(0, "/home/rushabh-jetson/lerobot/src")
+
+from utils.config import load_config
+from utils.logging import setup_logging
+from simulation.so100_env import SO100Env
+from models.smolvla_loader import SmolVLAInference
+from inference.run_closed_loop import run_closed_loop
 
 
 def parse_args():
-    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="SmolVLA inference on Jetson Orin Nano",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/default.yaml",
-        help="Path to configuration file"
-    )
-
-    parser.add_argument(
-        "--instruction",
-        type=str,
-        default=None,
-        help="Override instruction from config"
-    )
-
-    parser.add_argument(
-        "--duration",
-        type=float,
-        default=None,
-        help="Override episode duration (seconds)"
-    )
-
-    parser.add_argument(
-        "--fp16",
-        action="store_true",
-        help="Force FP16 inference mode"
-    )
-
-    parser.add_argument(
-        "--visualize",
-        action="store_true",
-        help="Enable real-time visualization"
-    )
-
-    parser.add_argument(
-        "--benchmark",
-        action="store_true",
-        help="Run benchmark mode"
-    )
-
-    parser.add_argument(
-        "--device",
-        type=str,
-        choices=["cuda", "cpu"],
-        default=None,
-        help="Override device from config"
-    )
-
+    parser.add_argument("--config", type=str, default="configs/default.yaml")
+    parser.add_argument("--instruction", type=str, default=None)
+    parser.add_argument("--duration", type=float, default=None)
+    parser.add_argument("--fp16", action="store_true")
+    parser.add_argument("--visualize", action="store_true")
+    parser.add_argument("--benchmark", action="store_true")
+    parser.add_argument("--device", type=str, choices=["cuda", "cpu"], default=None)
     return parser.parse_args()
 
 
 def setup_signal_handlers():
-    """Setup graceful shutdown handlers."""
-    def signal_handler(signum, frame):
-        print("\n[INFO] Received shutdown signal. Cleaning up...")
-        # TODO: Add cleanup logic
+    def _handler(signum, frame):
+        print("\n[INFO] Shutting down ...")
         sys.exit(0)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-
-def check_dependencies():
-    """Verify all required dependencies are available."""
-    missing = []
-
-    try:
-        import torch
-        print(f"[OK] PyTorch {torch.__version__}")
-        if torch.cuda.is_available():
-            print(f"[OK] CUDA available: {torch.cuda.get_device_name(0)}")
-        else:
-            print("[WARN] CUDA not available, will use CPU")
-    except ImportError:
-        missing.append("torch")
-
-    try:
-        import mujoco
-        print(f"[OK] MuJoCo {mujoco.__version__}")
-    except ImportError:
-        missing.append("mujoco")
-
-    try:
-        import transformers
-        print(f"[OK] Transformers {transformers.__version__}")
-    except ImportError:
-        missing.append("transformers")
-
-    # Check MuJoCo Menagerie
-    menagerie_path = Path("third_party/mujoco_menagerie/trs_so_arm100")
-    if menagerie_path.exists():
-        print(f"[OK] MuJoCo Menagerie: SO-ARM100 found")
-    else:
-        print("[WARN] MuJoCo Menagerie not found. Run: ./scripts/setup_menagerie.sh")
-
-    if missing:
-        print(f"\n[ERROR] Missing dependencies: {', '.join(missing)}")
-        print("Run: pip install -r requirements.txt")
-        return False
-
-    return True
+    signal.signal(signal.SIGINT, _handler)
+    signal.signal(signal.SIGTERM, _handler)
 
 
 def main():
-    """Main entry point."""
     args = parse_args()
-
-    print("=" * 60)
-    print("Edge SmolVLA Inference - Jetson Orin Nano")
-    print("=" * 60)
-    print()
-
-    # Setup signal handlers for graceful shutdown
     setup_signal_handlers()
 
-    # Check dependencies
-    print("[1/5] Checking dependencies...")
-    if not check_dependencies():
-        sys.exit(1)
-    print()
+    # Load config
+    config = load_config(args.config)
 
-    # TODO: Load configuration
-    print("[2/5] Loading configuration...")
-    print(f"      Config file: {args.config}")
-    # config = load_config(args.config)
     # Apply CLI overrides
-    # if args.instruction:
-    #     config.inference.instruction = args.instruction
-    # if args.fp16:
-    #     config.model.use_fp16 = True
-    # if args.device:
-    #     config.model.device = args.device
-    print()
+    if args.instruction:
+        config.setdefault("inference", {})["instruction"] = args.instruction
+    if args.fp16:
+        config.setdefault("model", {})["use_fp16"] = True
+    if args.device:
+        config.setdefault("model", {})["device"] = args.device
+    if args.duration:
+        config.setdefault("benchmark", {})["duration_sec"] = args.duration
 
-    # TODO: Setup logging
-    print("[3/5] Setting up logging...")
-    # setup_logging(config.logging)
-    # logger = get_logger(__name__)
-    print()
+    # Setup logging
+    log_cfg = config.get("logging", {})
+    log_dir = log_cfg.get("log_dir", "logs/")
+    log_file = str(Path(log_dir) / f"{log_cfg.get('filename', 'smolvla')}.log")
+    logger = setup_logging(level=log_cfg.get("level", "INFO"), log_file=log_file)
 
-    # TODO: Initialize environment
-    print("[4/5] Initializing simulation environment...")
-    # env = SO100PickEnv(config.simulation)
-    # print(f"      Joint dimensions: {env.get_joint_dim()}")
-    print()
+    logger.info("=" * 60)
+    logger.info("Edge SmolVLA Inference - Jetson Orin Nano")
+    logger.info("=" * 60)
 
-    # TODO: Load model
-    print("[5/5] Loading SmolVLA model...")
-    # model = SmolVLAModel(
-    #     config.model.name,
-    #     device=config.model.device,
-    #     use_fp16=config.model.use_fp16
-    # )
-    print()
+    model_cfg = config.get("model", {})
+    sim_cfg = config.get("simulation", {})
+    inf_cfg = config.get("inference", {})
 
-    print("=" * 60)
-    print("Setup complete! Ready to run inference.")
-    print("=" * 60)
-    print()
-    print("NOTE: Implementation in progress.")
-    print("      See TASKS.md for implementation status.")
-    print()
+    device = model_cfg.get("device", "cuda")
+    use_fp16 = model_cfg.get("use_fp16", False)
+    model_id = model_cfg.get("name", "lerobot/smolvla_base")
+    scene_path = sim_cfg.get("scene_path", "simulation/scene.xml")
+    instruction = inf_cfg.get("instruction", "pick up the cube")
 
-    # TODO: Run inference loop
-    # if args.benchmark:
-    #     from benchmarking.benchmark import run_benchmark
-    #     run_benchmark(env, model, config)
-    # else:
-    #     run_episode(
-    #         env=env,
-    #         model=model,
-    #         instruction=config.inference.instruction,
-    #         duration_sec=args.duration or config.benchmark.duration_sec,
-    #         visualize=args.visualize
-    #     )
+    logger.info(f"Device: {device} | FP16: {use_fp16}")
+    logger.info(f"Instruction: {instruction}")
+    logger.info(f"Scene: {scene_path}")
+
+    # Load model BEFORE initializing env: on Jetson unified memory, MuJoCo EGL
+    # consumes ~0.5GB at init time, shrinking the CUDA-visible pool. Loading the
+    # model first gives the GPU move the full ~3GB headroom it needs.
+    logger.info("Loading SmolVLA model ...")
+    model = SmolVLAInference(
+        model_id=model_id,
+        device=device,
+        use_fp16=use_fp16,
+        instruction=instruction,
+    )
+    model.load()
+
+    # Initialize environment
+    logger.info("Initializing simulation environment ...")
+    env = SO100Env(
+        scene_path=scene_path,
+        image_resolution=sim_cfg.get("image_resolution", 512),
+    )
+
+    # Run inference loop
+    try:
+        metrics = run_closed_loop(env, model, config)
+        logger.info(f"Result: {metrics}")
+    finally:
+        env.close()
 
 
 if __name__ == "__main__":
